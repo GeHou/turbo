@@ -1,5 +1,6 @@
 <?php
 function is_identifier($str) {
+    return $str;
     return is_string($str) && preg_match('/^[a-z][0-9a-z]*(_[0-9a-z]+)*$/', $str);
 }
 class engine {
@@ -9,18 +10,32 @@ class engine {
     const default_action = 'index';
     public static function run() {
         config::load();
-        $controller_name = visitor::g_str(self::controller_key);
-        if (!is_identifier($controller_name)) {
-            $controller_name = self::default_controller;
+        if(1) { //@todo 暂时只支持伪静态模式
+            $requestUri = $_SERVER['REQUEST_URI'];
+            $requestUriArr = explode("/", $requestUri);
+            $controllerName = $requestUriArr[1];
+            $actionName = $requestUriArr[2];
+            if (!is_identifier($controllerName)) {
+                $controllerName = self::default_controller;
+            }
+            if (!is_identifier($actionName)) {
+                $actionName = self::default_action;
+            }
+        } else {
+            $controllerName = visitor::g_str(self::controller_key);
+            if (!is_identifier($controllerName)) {
+                $controllerName = self::default_controller;
+            }
+            $actionName = visitor::g_str(self::action_key);
+            if (!is_identifier($actionName)) {
+                $actionName = self::default_action;
+            }
+            
         }
-        $action_name = visitor::g_str(self::action_key);
-        if (!is_identifier($action_name)) {
-            $action_name = self::default_action;
-        }
-        require app_dir . '/controller/' . $controller_name . '.php';
-        controller::set_target($controller_name, $action_name);
-        $controller = $controller_name . '_controller';
-        $action = $action_name . '_action';
+        require app_dir . '/controller/' . $controllerName . '.php';
+        controller::set_target($controllerName, $actionName);
+        $controller = $controllerName . '_controller';
+        $action = $actionName . '_action';
         $controller::$action();
     }
 }
@@ -64,17 +79,17 @@ class controller {
     }
     public static function show($tpl_file = '') {
         if ($tpl_file === '') {
-            $tpl_file = self::$controller_name . '_' . self::$action_name . '.tpl';
+            $tpl_file = self::$controllerName . '_' . self::$actionName . '.tpl';
         }
         extract(self::$args);
         require app_dir . '/template/' . $tpl_file;
     }
-    public static function set_target($controller_name, $action_name) {
-        self::$controller_name = $controller_name;
-        self::$action_name = $action_name;
+    public static function set_target($controllerName, $actionName) {
+        self::$controllerName = $controllerName;
+        self::$actionName = $actionName;
     }
-    public static $controller_name = '';
-    public static $action_name = '';
+    public static $controllerName = '';
+    public static $actionName = '';
     protected static $args = array();
 }
 class checker {
